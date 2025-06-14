@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Мессенджер</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="screen-container">
+        <div class="app-screen active" id="chat-list-screen">
+            <header class="header">
+                <h1>Диалоги</h1>
+                <button id="new-dialog-btn" class="new-dialog-button">+</button>
+            </header>
+            <main class="chat-list">
+                <p class="no-dialogs-message">Начните новый диалог, нажав на '+'</p>
+                <!-- Диалоги будут добавляться сюда -->
+            </main>
+        </div>
+
+        <div class="app-screen inactive-right" id="chat-screen">
+            <header class="chat-header">
+                <button class="back-button">←</button>
+                <h1 id="chat-title"></h1>
+                <button class="more-options-button">⋮</button>
+            </header>
+            <main class="messages-container">
+                <!-- Сообщения будут добавляться сюда -->
+            </main>
+
+            <!-- Меню редактирования сообщения (скрыто по умолчанию) -->
+            <div class="message-editor-menu hidden-menu" id="message-editor-menu">
+                <button id="mark-green-btn">Пометить зеленым</button>
+                <button id="mark-red-btn">Пометить красным</button>
+                <textarea id="note-input" placeholder="Добавьте пометку..."></textarea>
+                <button id="save-note-btn">Сохранить</button>
+                <button id="cancel-edit-btn">Отмена</button>
+            </div>
+
+            <div class="message-input-area">
+                <input type="text" id="message-input" placeholder="Введите сообщение...">
+                <button id="send-message-btn">Отправить</button>
+            </div>
+            <div class="options-menu hidden-menu">
+                <button id="import-messages-btn">+ Добавить сообщения</button>
+                <button id="delete-dialog-btn">Удалить диалог</button>
+                <button id="admin-select-user-btn" class="hidden">Выбрать пользователя (Админ)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="import-modal hidden-modal">
+        <div class="modal-content">
+            <h2>Вставьте диалог из Telegram</h2>
+            <textarea id="telegram-dialog-input" placeholder="Вставьте сюда скопированный диалог..."></textarea>
+            <button id="process-import-btn">Обработать</button>
+            <button id="close-modal-btn">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Кастомное модальное окно для создания нового диалога -->
+    <div class="custom-modal hidden-modal" id="new-dialog-modal">
+        <div class="modal-content">
+            <h2>Новый диалог</h2>
+            <input type="text" id="participant1-input" placeholder="Имя первого участника">
+            <input type="text" id="participant2-input" placeholder="Имя второго участника">
+            <button id="create-new-dialog-btn">Создать</button>
+            <button id="cancel-new-dialog-btn">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Кастомное модальное окно для выбора пользователя администратором -->
+    <div class="custom-modal hidden-modal" id="admin-user-selection-modal">
+        <div class="modal-content">
+            <h2>Выберите пользователя</h2>
+            <div id="user-list-container" class="user-list-container">
+                <!-- Список пользователей будет загружаться сюда -->
+            </div>
+            <button id="close-user-selection-modal-btn">Отмена</button>
+        </div>
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js?57"></script>
+    <!-- Firebase SDKs -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
+    
