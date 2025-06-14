@@ -4,7 +4,600 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iOS Мессенджер</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+/* style.css - Стили для iOS-подобного мессенджера */
+
+/* Общие стили */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5; /* Чуть более темный и мягкий фон */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Выравнивание по верху */
+    min-height: 100vh;
+    overflow: hidden; /* Скрываем прокрутку для smooth анимаций */
+}
+
+.screen-container {
+    background-color: #fff; /* Белый фон для приложения */
+    width: 100%;
+    max-width: 650px; /* Увеличим максимальную ширину для десктопных устройств */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); /* Более выраженная и мягкая тень */
+    position: relative; /* Для позиционирования экранов */
+    height: 100vh; /* Высота на весь экран */
+    overflow: hidden; /* Скрываем содержимое, выходящее за пределы контейнера */
+    border-radius: 15px; /* Скругленные углы для всего контейнера */
+}
+
+.app-screen {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    transition: transform 0.3s ease-out; /* Плавный переход */
+}
+
+.app-screen.active {
+    transform: translateX(0); /* Активный экран на месте */
+    z-index: 1; /* Убедимся, что активный экран находится сверху */
+}
+
+.app-screen.inactive-right { /* Неактивный экран, скрыт справа */
+    transform: translateX(100%);
+}
+
+.app-screen.inactive-left { /* Неактивный экран, скрыт слева */
+    transform: translateX(-100%);
+}
+
+/* Шапка */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px; /* Увеличим горизонтальный отступ */
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Легкая тень для шапки */
+}
+
+.header h1 {
+    font-size: 26px; /* Чуть крупнее заголовок */
+    font-weight: 700;
+    margin: 0;
+    color: #333;
+}
+
+.new-dialog-button {
+    background-color: #007aff; /* iOS синий */
+    color: #fff;
+    border: none;
+    border-radius: 50%; /* Круглая кнопка */
+    width: 44px; /* Чуть крупнее */
+    height: 44px; /* Чуть крупнее */
+    font-size: 26px; /* Чуть крупнее текст */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 122, 255, 0.3); /* Тень для кнопки */
+    transition: background-color 0.2s ease, box-shadow 0.2s ease; /* Добавляем тень в переход */
+}
+
+.new-dialog-button:hover {
+    background-color: #005bb5; /* Темнее синий при наведении */
+    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.4); /* Усиленная тень при наведении */
+}
+
+/* Список диалогов */
+.chat-list {
+    flex: 1;
+    overflow-y: auto; /* Прокрутка для списка диалогов */
+    padding: 0;
+    list-style: none;
+}
+
+.no-dialogs-message {
+    text-align: center;
+    color: #888;
+    margin-top: 50px;
+    font-size: 16px;
+}
+
+/* Медиа-запросы для адаптивного дизайна */
+@media (max-width: 600px) {
+    .screen-container {
+        height: 100vh;
+        border-radius: 0; /* Убираем закругления на мобильных */
+        box-shadow: none; /* Убираем тень на мобильных */
+    }
+
+    body {
+        align-items: stretch; /* Растягивание по вертикали на мобильных */
+        background-color: #fff; /* Белый фон на мобильных для соответствия дизайну */
+    }
+}
+
+/* Стили для элементов списка диалогов */
+.chat-list-item {
+    padding: 18px 20px; /* Увеличим отступы */
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 8px; /* Немного скруглим углы */
+    margin-bottom: 5px; /* Отступ между элементами */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Легкая тень */
+}
+
+.chat-list-item:hover {
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Усилим тень при наведении */
+}
+
+.chat-list-item h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.chat-list-item p {
+    font-size: 14px;
+    color: #888;
+    margin: 0;
+}
+
+/* Общие стили для скрытых элементов */
+.hidden,
+.hidden-menu,
+.hidden-modal {
+    opacity: 0 !important; /* Скрываем элемент */
+    visibility: hidden !important; /* Делаем невидимым для событий мыши */
+    pointer-events: none !important; /* Игнорируем события мыши */
+    transition: opacity 0.3s ease, visibility 0.3s ease; /* Плавный переход */
+}
+
+/* Стили для интерфейса чата */
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px; /* Увеличим горизонтальный отступ */
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Легкая тень для шапки */
+}
+
+.chat-header .back-button {
+    background: none;
+    border: none;
+    font-size: 26px; /* Чуть крупнее */
+    color: #007aff;
+    cursor: pointer;
+    padding: 0 10px 0 0;
+    transition: color 0.2s ease; /* Добавляем переход для цвета */
+}
+
+.chat-header .back-button:hover {
+    color: #005bb5;
+}
+
+.chat-header #chat-title {
+    font-size: 22px; /* Чуть крупнее заголовок чата */
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.chat-header .more-options-button {
+    background: none;
+    border: none;
+    font-size: 26px; /* Чуть крупнее */
+    color: #007aff;
+    cursor: pointer;
+    padding: 0 0 0 10px;
+    transition: color 0.2s ease; /* Добавляем переход для цвета */
+}
+
+.chat-header .more-options-button:hover {
+    color: #005bb5;
+}
+
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    background-color: #f0f0f0; /* Фон чата теперь блекло серый яркий */
+}
+
+.message-input-area {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f8f8f8;
+    border-radius: 10px; /* Более мягкие углы для полей ввода */
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.message-input-area #message-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.message-input-area #send-message-btn {
+    background-color: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 122, 255, 0.2); /* Мягкая тень для кнопок */
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.message-input-area #send-message-btn:hover {
+    background-color: #005bb5;
+    box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 20px; /* Более скругленные углы для пузырьков */
+    margin-bottom: 8px;
+    word-wrap: break-word; /* Перенос длинных слов */
+    white-space: pre-wrap; /* Сохраняет пробелы и переносы */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Легкая тень для пузырьков */
+    position: relative; /* Для позиционирования метки */
+}
+
+.message-bubble.right {
+    align-self: flex-end; /* Выравнивание справа */
+    background-color: #fff; /* Белый фон для правых сообщений */
+    color: #333;
+    border: 1px solid #e0e0e0; /* Серая рамка */
+}
+
+.message-bubble.left {
+    align-self: flex-start; /* Выравнивание слева */
+    background-color: #fff; /* Белый фон для левых сообщений */
+    color: #333;
+    border: 1px solid #e0e0e0; /* Серая рамка */
+}
+
+.message-info {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-top: 5px;
+    text-align: right; /* Время и отправитель справа */
+}
+
+.message-bubble.left .message-info {
+    text-align: left; /* Для левых сообщений выравнивание слева */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message-bubble {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Стили для меню опций (импорт, удаление) */
+.options-menu {
+    position: absolute;
+    bottom: 80px; /* Над полем ввода */
+    right: 10px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100;
+    transform-origin: bottom right; /* Точка трансформации для анимации */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+}
+
+.options-menu.show-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.options-menu.hidden-menu {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+}
+
+.options-menu button {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 16px;
+    color: #007aff;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+.options-menu button:last-child {
+    border-bottom: none;
+}
+
+.options-menu button:hover {
+    background-color: #f0f0f0;
+}
+
+#delete-dialog-btn {
+    color: #ff3b30; /* Красный для кнопки удаления */
+}
+
+#delete-dialog-btn:hover {
+    background-color: #ffebeb;
+}
+
+/* Стили для модальных окон */
+.import-modal, .custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.import-modal.show-modal, .custom-modal.show-modal {
+    opacity: 1;
+    visibility: visible;
+}
+
+.import-modal.hidden-modal, .custom-modal.hidden-modal {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.import-modal.show-modal .modal-content, .custom-modal.show-modal .modal-content {
+    transform: translateY(0);
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: translateY(-20px); /* Начальное смещение для анимации */
+    transition: transform 0.3s ease-out;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 24px;
+    text-align: center;
+}
+
+.modal-content textarea {
+    width: calc(100% - 20px);
+    height: 150px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    resize: vertical;
+}
+
+.modal-content button {
+    background-color: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 122, 255, 0.2);
+}
+
+.modal-content button:hover {
+    background-color: #005bb5;
+    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+}
+
+.modal-content #close-modal-btn,
+.modal-content #cancel-new-dialog-btn,
+.modal-content #close-user-selection-modal-btn {
+    background-color: #ccc; /* Серый цвет для кнопок отмены */
+    color: #333;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content #close-modal-btn:hover,
+.modal-content #cancel-new-dialog-btn:hover,
+.modal-content #close-user-selection-modal-btn:hover {
+    background-color: #bbb;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.custom-modal .modal-content input[type="text"] {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.message-editor-menu {
+    position: fixed;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1000;
+    min-width: 200px; /* Минимальная ширина для меню */
+    padding: 10px; /* Внутренние отступы */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+    pointer-events: none; /* Изначально не реагирует на события */
+}
+
+.message-editor-menu.show-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto; /* Реагирует на события, когда видно */
+}
+
+.message-editor-menu.hidden-menu {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.message-editor-menu button {
+    background: none;
+    border: none;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 16px;
+    color: #007aff;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+.message-editor-menu button:last-of-type { /* last-of-type для кнопки Отмена */
+    border-bottom: none;
+}
+
+.message-editor-menu button:hover {
+    background-color: #f0f0f0;
+}
+
+.message-editor-menu #mark-green-btn {
+    color: #28a745; /* Зеленый цвет для кнопки */
+}
+
+.message-editor-menu #mark-green-btn:hover {
+    background-color: #e6ffe6;
+}
+
+.message-editor-menu #mark-red-btn {
+    color: #dc3545; /* Красный цвет для кнопки */
+}
+
+.message-editor-menu #mark-red-btn:hover {
+    background-color: #ffe6e6;
+}
+
+.message-editor-menu textarea {
+    width: calc(100% - 30px); /* С учетом паддинга */
+    min-height: 80px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.message-bubble.green {
+    background-color: #e6ffe6; /* Светло-зеленый фон */
+    border: 1px solid #28a745; /* Зеленая рамка */
+}
+
+.message-bubble.red {
+    background-color: #ffe6e6; /* Светло-красный фон */
+    border: 1px solid #dc3545; /* Красная рамка */
+}
+
+.message-bubble .note-content {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    word-break: break-word; /* Перенос слов */
+    white-space: pre-wrap; /* Сохраняет пробелы и переносы */
+}
+
+.message-bubble.right .note-content {
+    text-align: right;
+}
+
+.message-bubble.red .note-content,
+.message-bubble.green .note-content {
+    color: #333; /* Более темный цвет текста пометки для лучшей читаемости на цветном фоне */
+}
+/* Стили для списка пользователей в админке */
+.user-list-container {
+    max-height: 300px; /* Ограничиваем высоту контейнера */
+    overflow-y: auto; /* Добавляем прокрутку */
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.user-list-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.user-list-item:last-child {
+    border-bottom: none;
+}
+
+.user-list-item:hover {
+    background-color: #e0e0e0;
+}
+
+    </style>
 </head>
 <body>
     <div class="screen-container">
@@ -85,7 +678,706 @@
     <!-- Firebase SDKs -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js"></script>
-    <script type="module" src="script.js"></script>
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+/* script.js - Логика для iOS-подобного мессенджера */
+
+document.addEventListener('DOMContentLoaded', () => {
+    const newDialogBtn = document.getElementById('new-dialog-btn');
+    const chatList = document.querySelector('.chat-list');
+    const noDialogsMessage = document.querySelector('.no-dialogs-message');
+
+    const chatListScreen = document.getElementById('chat-list-screen'); // Новый элемент
+    const chatScreen = document.getElementById('chat-screen'); // Новый элемент
+    const chatTitle = document.getElementById('chat-title');
+    const backButton = document.querySelector('.back-button');
+    const messagesContainer = document.querySelector('.messages-container');
+    const messageInput = document.getElementById('message-input');
+    const sendMessageBtn = document.getElementById('send-message-btn');
+    const moreOptionsButton = document.querySelector('.more-options-button');
+    const optionsMenu = document.querySelector('.options-menu');
+    const importMessagesBtn = document.getElementById('import-messages-btn');
+    const importModal = document.querySelector('.import-modal');
+    const telegramDialogInput = document.getElementById('telegram-dialog-input');
+    const processImportBtn = document.getElementById('process-import-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+
+    // Новые элементы для кастомного модального окна создания диалога
+    const newDialogModal = document.getElementById('new-dialog-modal');
+    const participant1Input = document.getElementById('participant1-input');
+    const participant2Input = document.getElementById('participant2-input');
+    const createNewDialogBtn = document.getElementById('create-new-dialog-btn');
+    const cancelNewDialogBtn = document.getElementById('cancel-new-dialog-btn');
+
+    // Элементы для меню редактирования сообщений
+    const messageEditorMenu = document.getElementById('message-editor-menu');
+    const markGreenBtn = document.getElementById('mark-green-btn');
+    const markRedBtn = document.getElementById('mark-red-btn');
+    const noteInput = document.getElementById('note-input');
+    const saveNoteBtn = document.getElementById('save-note-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+    // Новые элементы для выбора пользователя администратором
+    const adminSelectUserBtn = document.getElementById('admin-select-user-btn');
+    const adminUserSelectionModal = document.getElementById('admin-user-selection-modal');
+    const userListContainer = document.getElementById('user-list-container');
+    const closeUserSelectionModalBtn = document.getElementById('close-user-selection-modal-btn');
+
+    let isAdmin = false; // По умолчанию пользователь не администратор
+    let currentUserId = null; // Будет хранить Telegram User ID
+    let dialogs = []; // Диалоги теперь будут загружаться из Firebase
+    let currentDialog = null; // Текущий открытый диалог
+    let unsubscribeFromDialogs = null; // Для отписки от предыдущего слушателя Firebase
+
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDCD5MSC1-hFrXK2JD-rAkjbM4DmBTaYAo",
+        authDomain: "koworking-5a698.firebaseapp.com",
+        databaseURL: "https://koworking-5a698-default-rtdb.firebaseio.com",
+        projectId: "koworking-5a698",
+        storageBucket: "koworking-5a698.firebasestorage.app",
+        messagingSenderId: "600778210650",
+        appId: "1:600778210650:web:e855c57d25895fade4c763",
+        measurementId: "G-HQFE1Z2JRQ"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    const saveDialogs = () => {
+        if (currentUserId) {
+            set(ref(database, 'users/' + currentUserId + '/dialogs'), dialogs)
+                .then(() => {
+                    console.log('Диалоги сохранены в Firebase:', dialogs);
+                })
+                .catch(error => {
+                    console.error('Ошибка при сохранении диалогов в Firebase:', error);
+                });
+        } else {
+            console.warn('Не удалось сохранить диалоги: User ID не определен.');
+        }
+    };
+
+    // Загрузка ID администраторов из admin.json
+    fetch('admin.json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(adminIds => {
+            // Проверка, что Telegram Web App доступен и user.id существует
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                currentUserId = Telegram.WebApp.initDataUnsafe.user.id;
+                isAdmin = adminIds.includes(currentUserId);
+                console.log(`Пользователь ID: ${currentUserId}, является администратором: ${isAdmin}`); // Логирование статуса администратора
+                
+                // Если пользователь администратор, показать кнопку выбора пользователя
+                if (isAdmin) {
+                    adminSelectUserBtn.classList.remove('hidden');
+                }
+
+                // После получения currentUserId, загружаем диалоги из Firebase
+                if (currentUserId) {
+                    // Если есть существующая подписка, отменяем ее
+                    if (unsubscribeFromDialogs) {
+                        unsubscribeFromDialogs();
+                    }
+                    const userDialogsRef = ref(database, 'users/' + currentUserId + '/dialogs');
+                    unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
+                        const data = snapshot.val();
+                        dialogs = data ? data : [];
+                        console.log('Диалоги загружены из Firebase:', dialogs); // Логирование загрузки
+                        renderDialogs(); // Обновляем отображение после загрузки
+                    }, (error) => {
+                        console.error('Ошибка при загрузке диалогов из Firebase:', error);
+                        dialogs = []; // Сброс диалогов в случае ошибки
+                        renderDialogs();
+                    });
+                }
+
+            } else {
+                console.warn('Telegram Web App или user ID недоступны. Режим администратора отключен и диалоги не будут загружены из Firebase.');
+                // Если Telegram User ID недоступен, мы не можем загрузить диалоги для конкретного пользователя
+                renderDialogs(); // Рендерим пустой список диалогов
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке admin.json:', error);
+            // В случае ошибки загрузки admin.json, isAdmin остается false
+            renderDialogs(); // Рендерим диалоги, даже если admin.json не загружен
+        });
+
+    // Переменные для отслеживания долгого нажатия
+    let pressTimer;
+    const longPressDuration = 500; // milliseconds
+
+    // Функции для управления экранами с анимацией
+    const showChatListScreen = () => {
+        // Чат уходит вправо
+        chatScreen.classList.remove('active');
+        chatScreen.classList.add('inactive-right');
+
+        // Список чатов появляется на месте
+        chatListScreen.classList.remove('inactive-left', 'inactive-right');
+        chatListScreen.classList.add('active');
+    };
+
+    const showChatScreen = () => {
+        // Список чатов уходит влево
+        chatListScreen.classList.remove('active');
+        chatListScreen.classList.add('inactive-left');
+
+        // Чат появляется на месте
+        chatScreen.classList.remove('inactive-left', 'inactive-right');
+        chatScreen.classList.add('active');
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+            return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            return 'Вчера, ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays <= 7) {
+            return date.toLocaleDateString('ru-RU', { weekday: 'short' }) + ', ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+    };
+
+    const renderMessages = () => {
+        messagesContainer.innerHTML = '';
+        if (!currentDialog) return;
+
+        currentDialog.messages.forEach((message, index) => {
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('message-bubble');
+            messageBubble.dataset.messageIndex = index; // Добавляем индекс сообщения
+
+            // Используем свойство position из объекта сообщения
+            messageBubble.classList.add(message.position);
+
+            // Добавляем классы для цвета, если они есть
+            if (message.color) {
+                messageBubble.classList.add(message.color);
+            }
+
+            let messageContent = `
+                ${message.text}
+                <span class="message-info">${message.sender}, ${formatDate(message.timestamp)}</span>
+            `;
+
+            // Добавляем пометку, если она есть
+            if (message.note) {
+                messageContent += `<span class="note-content">Пометка: ${message.note}</span>`;
+            }
+
+            messageBubble.innerHTML = messageContent;
+            messagesContainer.appendChild(messageBubble);
+        });
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Прокрутка вниз
+    };
+
+    const openChat = (dialogId) => {
+        currentDialog = dialogs.find(d => d.id === dialogId);
+        if (currentDialog) {
+            chatTitle.textContent = `${currentDialog.participant1} и ${currentDialog.participant2}`;
+            showChatScreen(); // Показать экран чата с анимацией
+            renderMessages();
+        }
+    };
+
+    const renderDialogs = () => {
+        chatList.innerHTML = '';
+        if (dialogs.length === 0) {
+            noDialogsMessage.classList.remove('hidden'); // Показать сообщение
+        } else {
+            noDialogsMessage.classList.add('hidden'); // Скрыть сообщение
+            dialogs.forEach((dialog) => {
+                const dialogItem = document.createElement('div');
+                dialogItem.classList.add('chat-list-item');
+                dialogItem.innerHTML = `
+                    <h2>${dialog.participant1} и ${dialog.participant2}</h2>
+                    <p>Последнее сообщение: ${dialog.messages.length > 0 ? dialog.messages[dialog.messages.length - 1].text : 'Нет сообщений'}</p>
+                `;
+                dialogItem.addEventListener('click', () => {
+                    openChat(dialog.id);
+                });
+                chatList.appendChild(dialogItem);
+            });
+        }
+    };
+
+    // Обновляем обработчик для кнопки 'Новый диалог'
+    newDialogBtn.addEventListener('click', () => {
+        newDialogModal.classList.remove('hidden-modal');
+        newDialogModal.classList.add('show-modal');
+        participant1Input.value = ''; // Очищаем поля
+        participant2Input.value = '';
+    });
+
+    // Обработчик для кнопки 'Создать' в новом модальном окне
+    createNewDialogBtn.addEventListener('click', () => {
+        const participant1 = participant1Input.value.trim();
+        const participant2 = participant2Input.value.trim();
+
+        if (!participant1 || !participant2) {
+            alert('Пожалуйста, введите имена обоих участников.');
+            return;
+        }
+
+        const newDialog = {
+            id: Date.now(),
+            participant1: participant1,
+            participant2: participant2,
+            messages: []
+        };
+        dialogs.push(newDialog);
+        saveDialogs();
+        renderDialogs();
+        console.log('Создан новый диалог:', newDialog); // Логирование создания
+        // Закрываем модальное окно
+        newDialogModal.classList.remove('show-modal');
+        newDialogModal.classList.add('hidden-modal');
+    });
+
+    // Обработчик для кнопки 'Отмена' в новом модальном окне
+    cancelNewDialogBtn.addEventListener('click', () => {
+        newDialogModal.classList.remove('show-modal');
+        newDialogModal.classList.add('hidden-modal');
+    });
+
+    sendMessageBtn.addEventListener('click', () => {
+        const text = messageInput.value.trim();
+        if (text && currentDialog) {
+            const newMessage = {
+                sender: currentDialog.participant1, // Предполагаем, что отправляет всегда первый участник
+                text: text,
+                timestamp: new Date().toISOString(),
+                color: null, // Добавляем новое свойство
+                note: null,   // Добавляем новое свойство
+                position: 'right' // Отправленное сообщение всегда справа
+            };
+            currentDialog.messages.push(newMessage);
+            saveDialogs();
+            renderMessages();
+            console.log('Отправлено новое сообщение:', newMessage); // Логирование отправки
+            messageInput.value = '';
+        }
+    });
+
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessageBtn.click();
+        }
+    });
+
+    backButton.addEventListener('click', () => {
+        currentDialog = null;
+        showChatListScreen(); // Показать список чатов с анимацией
+        renderDialogs(); // Обновить список диалогов, чтобы показать последнее сообщение
+    });
+
+    moreOptionsButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // Предотвратить закрытие при клике по кнопке
+        optionsMenu.classList.toggle('show-menu');
+        optionsMenu.classList.toggle('hidden-menu');
+    });
+
+    // Закрытие меню при клике вне его
+    document.addEventListener('click', (event) => {
+        if (!optionsMenu.contains(event.target) && !moreOptionsButton.contains(event.target)) {
+            if (optionsMenu.classList.contains('show-menu')) {
+                optionsMenu.classList.remove('show-menu');
+                optionsMenu.classList.add('hidden-menu');
+            }
+        }
+    });
+
+    importMessagesBtn.addEventListener('click', () => {
+        optionsMenu.classList.remove('show-menu');
+        optionsMenu.classList.add('hidden-menu');
+
+        importModal.classList.remove('hidden-modal');
+        importModal.classList.add('show-modal');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        importModal.classList.remove('show-modal');
+        importModal.classList.add('hidden-modal');
+        telegramDialogInput.value = ''; // Очистить поле ввода
+    });
+
+    processImportBtn.addEventListener('click', () => {
+        if (!currentDialog) {
+            alert('Пожалуйста, выберите диалог, в который нужно импортировать сообщения.');
+            return;
+        }
+
+        const telegramText = telegramDialogInput.value;
+        const participant1 = currentDialog.participant1;
+        const participant2 = currentDialog.participant2;
+
+        try {
+            const importedMessages = parseTelegramMessages(telegramText, participant1, participant2);
+            if (importedMessages.length > 0) {
+                currentDialog.messages.push(...importedMessages);
+                saveDialogs();
+                renderMessages();
+                alert(`Импортировано ${importedMessages.length} сообщений.`);
+                telegramDialogInput.value = ''; // Очистить поле после импорта
+                importModal.classList.remove('show-modal');
+                importModal.classList.add('hidden-modal');
+            } else {
+                alert('Не удалось импортировать сообщения. Проверьте формат.');
+            }
+        } catch (e) {
+            console.error('Ошибка при обработке импорта Telegram:', e);
+            alert('Произошла ошибка при импорте сообщений. Проверьте консоль для деталей.');
+        }
+    });
+
+    // Новые функции для парсинга Telegram, предоставленные пользователем
+    // Эта функция парсит текст диалога Telegram и возвращает массив объектов сообщений
+    function parseTelegramMessages(inputText, participant1, participant2) {
+        const messages = [];
+        const lines = inputText.split('\n');
+        
+        let currentSender = null;
+        let currentDate = null;
+        let currentLines = [];
+
+        // Регулярное выражение для заголовка сообщения (дата, время, отправитель)
+        // Пример: 15.11.2023 22:30 - Имя Отправителя
+        const headerRegex = /^(\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}) - ([^:]+):?$/;
+        // const headerRegex = /^(.*?) (\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}) - ([^:]+):?$/; // Глобальное regex
+        
+        for (const line of lines) {
+            const match = line.match(headerRegex);
+            
+            if (match) {
+                // Если найден новый заголовок, сохраняем предыдущее сообщение
+                if (currentSender !== null) {
+                    messages.push(createMessage(
+                        currentSender, 
+                        currentDate, 
+                        currentLines, 
+                        participant1, 
+                        participant2
+                    ));
+                }
+                
+                // Начинаем новое сообщение
+                const [, datePart, timePart, sender] = match;
+                currentSender = sender.trim();
+                currentDate = parseDate(`${datePart} ${timePart}`);
+                currentLines = [];
+            } else {
+                // Добавляем текст к текущему сообщению
+                if (currentSender !== null && line) {
+                    currentLines.push(line);
+                }
+            }
+        }
+        
+        // Добавляем последнее сообщение
+        if (currentSender !== null) {
+            messages.push(createMessage(
+                currentSender,
+                currentDate,
+                currentLines,
+                participant1,
+                participant2
+            ));
+        }
+        
+        return messages;
+    }
+
+    function parseDate(dateString) {
+        const [datePart, timePart] = dateString.split(' ');
+        const [day, month, year] = datePart.split('.').map(Number);
+        const [hours, minutes] = timePart.split(':').map(Number);
+        
+        // Валидация даты
+        if (
+            day > 31 || month > 12 || 
+            hours > 23 || minutes > 59 ||
+            isNaN(day) || isNaN(month) || isNaN(year)
+        ) {
+            console.warn('Некорректная дата:', dateString, 'Возвращена текущая дата.');
+            return new Date(); // Возвращаем текущую дату при ошибке
+        }
+        
+        return new Date(year, month - 1, day, hours, minutes);
+    }
+
+    function createMessage(sender, date, lines, p1, p2) {
+        // Обработка многострочных сообщений
+        let text = lines.join('\n').trim();
+        
+        // Удаление лишних переносов в конце, если они есть
+        if (text.endsWith('\n')) {
+            text = text.slice(0, -1);
+        }
+        
+        return {
+            sender,
+            text,
+            timestamp: date.toISOString(), // Преобразуем Date в ISO-строку для хранения
+            color: null,
+            note: null,
+            position: sender.toLowerCase() === p1.toLowerCase() ? 'right' : sender.toLowerCase() === p2.toLowerCase() ? 'left' : 'unknown'
+        };
+    }
+    // Конец новых функций парсинга Telegram
+
+    // Добавляем обработчик для кнопки удаления диалога
+    const deleteDialogBtn = document.getElementById('delete-dialog-btn');
+    deleteDialogBtn.addEventListener('click', () => {
+        if (currentDialog && confirm('Вы уверены, что хотите удалить этот диалог?')) {
+            dialogs = dialogs.filter(d => d.id !== currentDialog.id);
+            saveDialogs();
+            currentDialog = null;
+            showChatListScreen();
+            renderDialogs();
+            console.log('Диалог удален.'); // Логирование удаления
+            optionsMenu.classList.remove('show-menu');
+            optionsMenu.classList.add('hidden-menu');
+        }
+    });
+
+    // Закрытие меню редактирования сообщения
+    const hideMessageEditor = () => {
+        messageEditorMenu.classList.remove('show-menu');
+        messageEditorMenu.classList.add('hidden-menu');
+        selectedMessage = null;
+        noteInput.value = ''; // Очищаем поле пометки
+    };
+
+    // Открытие меню редактирования сообщения с заданием позиции
+    const showMessageEditor = (message, x, y) => {
+        if (!isAdmin) { // Проверяем, является ли пользователь администратором
+            return; // Если нет, просто выходим
+        }
+
+        selectedMessage = message;
+        noteInput.value = message.note || '';
+        messageEditorMenu.classList.remove('hidden-menu');
+        messageEditorMenu.classList.add('show-menu');
+
+        // Всегда позиционируем меню по центру экрана
+        messageEditorMenu.style.left = '50%';
+        messageEditorMenu.style.top = '50%';
+        messageEditorMenu.style.transform = 'translate(-50%, -50%)'; // Центрируем по обоим осям
+        messageEditorMenu.style.bottom = 'auto'; // Сбрасываем, если было установлено
+
+        // Добавляем закрытие меню редактирования, если клик был вне его
+        if (!messageEditorMenu.contains(event.target) && !event.target.closest('.message-bubble')) {
+            if (messageEditorMenu.classList.contains('show-menu')) {
+                hideMessageEditor();
+            }
+        }
+    };
+
+    // Переменная для хранения ссылки на выбранное сообщение
+    let selectedMessage = null;
+
+    // Долгое нажатие на сообщение (для мобильных устройств)
+    messagesContainer.addEventListener('mousedown', (e) => {
+        const messageBubble = e.target.closest('.message-bubble');
+        if (messageBubble && e.button === 0 && isAdmin) { // Только левая кнопка мыши и проверка isAdmin
+            // Предотвращаем выделение текста при долгом нажатии
+            e.preventDefault();
+            clearTimeout(pressTimer);
+            pressTimer = setTimeout(() => {
+                const messageIndex = parseInt(messageBubble.dataset.messageIndex);
+                const message = currentDialog.messages[messageIndex];
+                showMessageEditor(message);
+            }, longPressDuration);
+        }
+    });
+
+    messagesContainer.addEventListener('mouseup', () => {
+        clearTimeout(pressTimer);
+    });
+
+    messagesContainer.addEventListener('mouseleave', () => {
+        clearTimeout(pressTimer);
+    });
+
+    // Для мобильных устройств (touch events)
+    messagesContainer.addEventListener('touchstart', (e) => {
+        const messageBubble = e.target.closest('.message-bubble');
+        if (messageBubble && isAdmin) { // Проверка isAdmin
+            e.preventDefault(); // Предотвращаем стандартное поведение скролла
+            clearTimeout(pressTimer);
+            pressTimer = setTimeout(() => {
+                const messageIndex = parseInt(messageBubble.dataset.messageIndex);
+                const message = currentDialog.messages[messageIndex];
+                showMessageEditor(message);
+            }, longPressDuration);
+        }
+    });
+
+    messagesContainer.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+    });
+
+    messagesContainer.addEventListener('touchcancel', () => {
+        clearTimeout(pressTimer);
+    });
+
+    // Добавляем обработчик для правой кнопки мыши (ПК)
+    messagesContainer.addEventListener('contextmenu', (e) => {
+        const messageBubble = e.target.closest('.message-bubble');
+        if (messageBubble && isAdmin) { // Проверка isAdmin
+            e.preventDefault(); // Отключаем стандартное контекстное меню
+            clearTimeout(pressTimer); // Отменяем таймер долгого нажатия, если он активен
+
+            const messageIndex = parseInt(messageBubble.dataset.messageIndex);
+            const message = currentDialog.messages[messageIndex];
+
+            // Позиционируем меню относительно курсора
+            showMessageEditor(message, e.clientX, e.clientY);
+        }
+    });
+
+    // Обработчики кнопок меню редактирования
+    markGreenBtn.addEventListener('click', () => {
+        if (selectedMessage) {
+            selectedMessage.color = 'green';
+            saveDialogs();
+            renderMessages();
+            hideMessageEditor();
+        }
+    });
+
+    markRedBtn.addEventListener('click', () => {
+        if (selectedMessage) {
+            selectedMessage.color = 'red';
+            saveDialogs();
+            renderMessages();
+            hideMessageEditor();
+        }
+    });
+
+    saveNoteBtn.addEventListener('click', () => {
+        if (selectedMessage) {
+            selectedMessage.note = noteInput.value.trim();
+            saveDialogs();
+            renderMessages();
+            hideMessageEditor();
+        }
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+        hideMessageEditor();
+    });
+
+    // Функция для загрузки диалогов выбранного пользователя (для админа)
+    const loadSelectedUserDialogs = (userIdToLoad) => {
+        if (unsubscribeFromDialogs) {
+            unsubscribeFromDialogs(); // Отписываемся от предыдущего слушателя
+        }
+
+        currentUserId = userIdToLoad; // Обновляем текущего пользователя на выбранного админом
+        const userDialogsRef = ref(database, 'users/' + userIdToLoad + '/dialogs');
+        unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
+            const data = snapshot.val();
+            dialogs = data ? data : [];
+            console.log(`Диалоги для пользователя ${userIdToLoad} загружены из Firebase:`, dialogs); // Логирование загрузки
+            renderDialogs(); // Обновляем отображение после загрузки
+            showChatListScreen(); // Возвращаемся к списку чатов
+            adminUserSelectionModal.classList.remove('show-modal');
+            adminUserSelectionModal.classList.add('hidden-modal');
+        }, (error) => {
+            console.error(`Ошибка при загрузке диалогов для пользователя ${userIdToLoad} из Firebase:`, error);
+            dialogs = []; // Сброс диалогов в случае ошибки
+            renderDialogs();
+        });
+    };
+
+    // Открытие модального окна выбора пользователя для админа
+    const openUserSelectionModal = () => {
+        userListContainer.innerHTML = '<p>Загрузка пользователей...</p>';
+        adminUserSelectionModal.classList.remove('hidden-modal');
+        adminUserSelectionModal.classList.add('show-modal');
+
+        const usersRef = ref(database, 'users');
+        onValue(usersRef, (snapshot) => {
+            const usersData = snapshot.val();
+            userListContainer.innerHTML = ''; // Очищаем список
+            if (usersData) {
+                Object.keys(usersData).forEach(userId => {
+                    const userItem = document.createElement('div');
+                    userItem.classList.add('user-list-item');
+                    userItem.textContent = `Пользователь: ${userId}`;
+                    userItem.dataset.userId = userId;
+                    userItem.addEventListener('click', () => loadSelectedUserDialogs(userId));
+                    userListContainer.appendChild(userItem);
+                });
+            } else {
+                userListContainer.innerHTML = '<p>Пользователи не найдены.</p>';
+            }
+        }, (error) => {
+            console.error('Ошибка при загрузке списка пользователей:', error);
+            userListContainer.innerHTML = '<p>Ошибка загрузки пользователей.</p>';
+        }, { onlyOnce: true }); // Загружаем список пользователей только один раз при открытии модального окна
+    };
+
+    // Обработчик кнопки выбора пользователя (для админа)
+    adminSelectUserBtn.addEventListener('click', () => {
+        if (isAdmin) {
+            openUserSelectionModal();
+            optionsMenu.classList.remove('show-menu');
+            optionsMenu.classList.add('hidden-menu');
+        }
+    });
+
+    // Обработчик кнопки закрытия модального окна выбора пользователя
+    closeUserSelectionModalBtn.addEventListener('click', () => {
+        adminUserSelectionModal.classList.remove('show-modal');
+        adminUserSelectionModal.classList.add('hidden-modal');
+
+        // После закрытия модального окна, если мы не смотрим как админ, возвращаем диалоги текущего пользователя
+        // Это может быть необходимо, если админ открыл модалку, но не выбрал другого пользователя
+        // или если он хочет вернуться к своим диалогам
+        if (currentUserId && !isAdmin) { // Проверяем, что не админ и что есть текущий ID
+             // Если исходный пользователь не админ, и мы были в режиме просмотра админа, 
+             // то возвращаем диалоги исходного пользователя
+             const userDialogsRef = ref(database, 'users/' + Telegram.WebApp.initDataUnsafe.user.id + '/dialogs');
+             if (unsubscribeFromDialogs) {
+                 unsubscribeFromDialogs();
+             }
+             unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
+                 const data = snapshot.val();
+                 dialogs = data ? data : [];
+                 console.log('Возвращены диалоги текущего пользователя:', dialogs);
+                 renderDialogs();
+             }, (error) => {
+                 console.error('Ошибка при возвращении диалогов текущего пользователя:', error);
+             });
+        } else if (currentUserId && isAdmin) {
+            // Если админ закрыл модалку, но остается админом, и смотрит свои диалоги
+            // или диалоги какого-то другого пользователя, оставляем как есть
+            renderDialogs();
+        }
+    });
+
+    // Инициализация при загрузке страницы
+    renderDialogs();
+    // showChatListScreen(); // Убеждаемся, что список чатов виден при загрузке - этот вызов теперь не нужен, так как первый экран уже активен по умолчанию в index.html
+});
+</script>
 </body>
-</html>
-    
+</html> 
