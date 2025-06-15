@@ -678,9 +678,11 @@ body {
     <!-- Firebase SDKs -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"></script>
     <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 /* script.js - Логика для iOS-подобного мессенджера */
 
@@ -746,6 +748,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
+    const auth = getAuth(app);
+
+    // Анонимный вход для получения auth.uid
+    signInAnonymously(auth)
+        .then(() => {
+            console.log('Анонимный вход успешен.');
+        })
+        .catch((error) => {
+            console.error('Ошибка анонимного входа:', error);
+        });
 
     const saveDialogs = () => {
         if (currentUserId) {
@@ -756,6 +768,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(error => {
                     console.error('Ошибка при сохранении диалогов в Firebase:', error);
                 });
+
+            // Сохраняем имя пользователя в Firebase, если оно доступно и еще не сохранено
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && Telegram.WebApp.initDataUnsafe.user.username) {
+                const telegramUsername = Telegram.WebApp.initDataUnsafe.user.username;
+                const usernameRef = ref(database, 'users/' + currentUserId + '/username');
+                onValue(usernameRef, (snapshot) => {
+                    if (!snapshot.exists()) { // Если имя пользователя еще не сохранено
+                        set(usernameRef, telegramUsername.toLowerCase())
+                            .then(() => {
+                                console.log('Имя пользователя сохранено:', telegramUsername);
+                                // Также сохраняем в usernamesMap для быстрого поиска
+                                set(ref(database, 'usernamesMap/' + telegramUsername.toLowerCase()), currentUserId);
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при сохранении имени пользователя:', error);
+                            });
+                    }
+                }, { onlyOnce: true });
+            }
+
         } else {
             console.warn('Не удалось сохранить диалоги: User ID не определен.');
         }
@@ -1319,9 +1351,10 @@ document.addEventListener('DOMContentLoaded', () => {
             userListContainer.innerHTML = ''; // Очищаем список
             if (usersData) {
                 Object.keys(usersData).forEach(userId => {
+                    const username = usersData[userId].username || `ID: ${userId}`; // Показываем username, если есть
                     const userItem = document.createElement('div');
                     userItem.classList.add('user-list-item');
-                    userItem.textContent = `Пользователь: ${userId}`;
+                    userItem.textContent = `Пользователь: ${username}`; // Отображаем имя пользователя
                     userItem.dataset.userId = userId;
                     userItem.addEventListener('click', () => loadSelectedUserDialogs(userId));
                     userListContainer.appendChild(userItem);
