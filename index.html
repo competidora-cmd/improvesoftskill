@@ -781,24 +781,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             // Сохраняем имя пользователя в Firebase, если оно доступно и еще не сохранено
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && Telegram.WebApp.initDataUnsafe.user.username) {
-                const telegramUsername = Telegram.WebApp.initDataUnsafe.user.username;
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                const telegramUser = Telegram.WebApp.initDataUnsafe.user;
+                const telegramUsername = telegramUser.username;
                 const polzovatelRef = ref(database, 'users/' + currentUserId + '/polzovatel');
-                onValue(polzovatelRef, (snapshot) => {
-                    if (!snapshot.exists()) { // Если имя пользователя еще не сохранено
-                        set(polzovatelRef, telegramUsername.toLowerCase())
+                const linkedAuthUidRef = ref(database, 'users/' + currentUserId + '/linkedAuthUid');
+
+                // Проверяем и сохраняем linkedAuthUid (UID анонимного пользователя Firebase)
+                onValue(linkedAuthUidRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        set(linkedAuthUidRef, auth.currentUser.uid)
                             .then(() => {
-                                console.log('Пользователь сохранен:', telegramUsername);
-                                // Также сохраняем в polzovatelMap для быстрого поиска
-                                set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
+                                console.log('linkedAuthUid сохранен:', auth.currentUser.uid);
                             })
                             .catch(error => {
-                                console.error('Ошибка при сохранении имени пользователя:', error);
+                                console.error('Ошибка при сохранении linkedAuthUid:', error);
                             });
                     }
                 }, { onlyOnce: true });
-            }
 
+                // Проверяем и сохраняем polzovatel
+                if (telegramUsername) {
+                    onValue(polzovatelRef, (snapshot) => {
+                        if (!snapshot.exists()) { // Если имя пользователя еще не сохранено
+                            set(polzovatelRef, telegramUsername.toLowerCase())
+                                .then(() => {
+                                    console.log('Пользователь сохранен:', telegramUsername);
+                                    // Также сохраняем в polzovatelMap для быстрого поиска
+                                    set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
+                                })
+                                .catch(error => {
+                                    console.error('Ошибка при сохранении имени пользователя:', error);
+                                });
+                        }
+                    }, { onlyOnce: true });
+                }
+            } else {
+                console.warn('Telegram Web App или user ID недоступны. Имя пользователя и linkedAuthUid не будут сохранены.');
+            }
         } else {
             console.warn('Не удалось сохранить диалоги: User ID не определен.');
         }
@@ -816,12 +836,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Проверка, что Telegram Web App доступен и user.id существует
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                 currentUserId = Telegram.WebApp.initDataUnsafe.user.id;
-                isAdmin = adminIds.includes(currentUserId);
+                // Проверяем, является ли auth.currentUser.uid (Firebase анонимный UID) админом
+                // ИЛИ если текущий Telegram ID пользователя находится в adminIds (для обратной совместимости/гибкости)
+                isAdmin = adminIds.includes(currentUserId) || (auth.currentUser && adminIds.includes(auth.currentUser.uid));
+
                 console.log(`Пользователь ID: ${currentUserId}, является администратором: ${isAdmin}`); // Логирование статуса администратора
                 
                 // Если пользователь администратор, показать кнопку выбора пользователя
                 if (isAdmin) {
                     adminSelectUserBtn.classList.remove('hidden');
+                } else {
+                    adminSelectUserBtn.classList.add('hidden'); // Скрыть, если не админ
                 }
 
                 // После получения currentUserId, загружаем диалоги из Firebase
@@ -845,14 +870,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 console.warn('Telegram Web App или user ID недоступны. Режим администратора отключен и диалоги не будут загружены из Firebase.');
-                // Если Telegram User ID недоступен, мы не можем загрузить диалоги для конкретного пользователя
                 renderDialogs(); // Рендерим пустой список диалогов
             }
         })
         .catch(error => {
             console.error('Ошибка при загрузке admin.json:', error);
-            // В случае ошибки загрузки admin.json, isAdmin остается false
-            renderDialogs(); // Рендерим диалоги, даже если admin.json не загружен
+            renderDialogs();
         });
 
     // Переменные для отслеживания долгого нажатия
@@ -1423,6 +1446,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Убеждаемся, что список чатов виден при загрузке - этот вызов теперь не нужен, так как первый экран уже активен по умолчанию в index.html
 });
 </script>
-    <div class="app-version">Версия приложения 1.005</div>
+    <div class="app-version">Версия приложения 1.007</div>
 </body>
 </html> 
