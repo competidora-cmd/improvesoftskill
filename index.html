@@ -597,6 +597,17 @@ body {
     background-color: #e0e0e0;
 }
 
+/* Стили для версии приложения */
+.app-version {
+    position: fixed;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    z-index: 9999;
+}
+
     </style>
 </head>
 <body>
@@ -1412,5 +1423,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Убеждаемся, что список чатов виден при загрузке - этот вызов теперь не нужен, так как первый экран уже активен по умолчанию в index.html
 });
 </script>
+    <div class="app-version">Версия приложения 1.003</div>
 </body>
 </html> 
