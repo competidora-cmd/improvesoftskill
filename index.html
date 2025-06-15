@@ -764,63 +764,129 @@ document.addEventListener('DOMContentLoaded', () => {
     // Анонимный вход для получения auth.uid
     signInAnonymously(auth)
         .then(() => {
-            console.log('Анонимный вход успешен.');
+            console.log('Анонимный вход успешен. Auth UID:', auth.currentUser.uid);
         })
         .catch((error) => {
             console.error('Ошибка анонимного входа:', error);
         });
 
+    // Функция для сохранения диалогов (теперь более общая)
     const saveDialogs = () => {
-        if (currentUserId) {
-            set(ref(database, 'users/' + currentUserId + '/dialogs'), dialogs)
-                .then(() => {
-                    console.log('Диалоги сохранены в Firebase:', dialogs);
-                })
-                .catch(error => {
-                    console.error('Ошибка при сохранении диалогов в Firebase:', error);
-                });
+        if (!currentUserId || !auth.currentUser) { 
+            console.warn('Не удалось сохранить диалоги: User ID или Auth UID не определены.');
+            return;
+        }
 
-            // Сохраняем имя пользователя в Firebase, если оно доступно и еще не сохранено
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-                const telegramUser = Telegram.WebApp.initDataUnsafe.user;
-                const telegramUsername = telegramUser.username;
-                const polzovatelRef = ref(database, 'users/' + currentUserId + '/polzovatel');
-                const linkedAuthUidRef = ref(database, 'users/' + currentUserId + '/linkedAuthUid');
+        set(ref(database, 'users/' + currentUserId + '/dialogs'), dialogs)
+            .then(() => {
+                console.log('Диалоги сохранены в Firebase:', dialogs);
+            })
+            .catch(error => {
+                console.error('Ошибка при сохранении диалогов в Firebase:', error);
+            });
 
-                // Проверяем и сохраняем linkedAuthUid (UID анонимного пользователя Firebase)
-                onValue(linkedAuthUidRef, (snapshot) => {
-                    if (!snapshot.exists()) {
-                        set(linkedAuthUidRef, auth.currentUser.uid)
-                            .then(() => {
-                                console.log('linkedAuthUid сохранен:', auth.currentUser.uid);
-                            })
-                            .catch(error => {
-                                console.error('Ошибка при сохранении linkedAuthUid:', error);
-                            });
-                    }
-                }, { onlyOnce: true });
+        // Дополнительно убедимся, что polzovatel и linkedAuthUid сохранены
+        const telegramUser = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+        if (telegramUser) {
+            const telegramUsername = telegramUser.username;
+            const polzovatelRef = ref(database, 'users/' + currentUserId + '/polzovatel');
+            const linkedAuthUidRef = ref(database, 'users/' + currentUserId + '/linkedAuthUid');
 
-                // Проверяем и сохраняем polzovatel
-                if (telegramUsername) {
-                    onValue(polzovatelRef, (snapshot) => {
-                        if (!snapshot.exists()) { // Если имя пользователя еще не сохранено
-                            set(polzovatelRef, telegramUsername.toLowerCase())
-                                .then(() => {
-                                    console.log('Пользователь сохранен:', telegramUsername);
-                                    // Также сохраняем в polzovatelMap для быстрого поиска
-                                    set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
-                                })
-                                .catch(error => {
-                                    console.error('Ошибка при сохранении имени пользователя:', error);
-                                });
-                        }
-                    }, { onlyOnce: true });
+            // Убеждаемся, что linkedAuthUid установлен
+            onValue(linkedAuthUidRef, (snapshot) => {
+                if (!snapshot.exists() && auth.currentUser) {
+                    set(linkedAuthUidRef, auth.currentUser.uid)
+                        .then(() => console.log('linkedAuthUid сохранен (в saveDialogs): ', auth.currentUser.uid))
+                        .catch(error => console.error('Ошибка при сохранении linkedAuthUid (в saveDialogs): ', error));
                 }
-            } else {
-                console.warn('Telegram Web App или user ID недоступны. Имя пользователя и linkedAuthUid не будут сохранены.');
+            }, { once: true });
+
+            // Убеждаемся, что polzovatel сохранен
+            if (telegramUsername) {
+                onValue(polzovatelRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        set(polzovatelRef, telegramUsername.toLowerCase())
+                            .then(() => {
+                                console.log('Пользователь (polzovatel) сохранен (в saveDialogs): ', telegramUsername);
+                                set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
+                            })
+                            .catch(error => console.error('Ошибка при сохранении polzovatel (в saveDialogs): ', error));
+                    }
+                }, { once: true });
             }
-        } else {
-            console.warn('Не удалось сохранить диалоги: User ID не определен.');
+        }
+    };
+
+    // Вспомогательная функция для загрузки диалогов пользователя и сохранения polzovatel/linkedAuthUid
+    const loadUserDialogsAndPolzovatel = () => {
+        if (!currentUserId || !auth.currentUser) {
+            console.warn('Не удалось загрузить диалоги: User ID или Auth UID не определены.');
+            renderDialogs(); // Рендерим пустой список диалогов
+            return;
+        }
+
+        // Сначала убедимся, что linkedAuthUid установлен для текущего пользователя
+        const linkedAuthUidRef = ref(database, 'users/' + currentUserId + '/linkedAuthUid');
+        onValue(linkedAuthUidRef, (snapshot) => {
+            if (!snapshot.exists() && auth.currentUser) {
+                // Если linkedAuthUid еще не установлен, устанавливаем его
+                set(linkedAuthUidRef, auth.currentUser.uid)
+                    .then(() => {
+                        console.log('linkedAuthUid установлен для нового пользователя при загрузке:', auth.currentUser.uid);
+                        // После установки linkedAuthUid, продолжаем загрузку данных
+                        continueLoadingUserData();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при установке linkedAuthUid для нового пользователя при загрузке:', error);
+                        // Если произошла ошибка, все равно пытаемся продолжить, но это может вызвать PERMISSION_DENIED
+                        continueLoadingUserData();
+                    });
+            } else {
+                // Если linkedAuthUid уже существует, или auth.currentUser недоступен, просто продолжаем
+                continueLoadingUserData();
+            }
+        }, { onlyOnce: true });
+    };
+
+    const continueLoadingUserData = () => {
+        // Если есть существующая подписка, отменяем ее
+        if (unsubscribeFromDialogs) {
+            unsubscribeFromDialogs();
+        }
+        const userDialogsRef = ref(database, 'users/' + currentUserId + '/dialogs');
+        unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
+            const data = snapshot.val();
+            dialogs = data ? data : [];
+            console.log('Диалоги загружены из Firebase:', dialogs);
+            renderDialogs(); // Обновляем отображение после загрузки
+            // Возможно, здесь нужно показать chatListScreen, если мы переходим из другого состояния
+            if (chatScreen.classList.contains('active')) {
+                // Если чат активен, не переключаемся на список диалогов
+            } else {
+                showChatListScreen();
+            }
+        }, (error) => {
+            console.error('Ошибка при загрузке диалогов из Firebase:', error);
+            dialogs = [];
+            renderDialogs();
+        });
+
+        // Также убедимся, что polzovatel сохранен, если он еще не существует
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && Telegram.WebApp.initDataUnsafe.user.username) {
+            const telegramUsername = Telegram.WebApp.initDataUnsafe.user.username;
+            const polzovatelRef = ref(database, 'users/' + currentUserId + '/polzovatel');
+            onValue(polzovatelRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    set(polzovatelRef, telegramUsername.toLowerCase())
+                        .then(() => {
+                            console.log('Пользователь (polzovatel) сохранен при загрузке:', telegramUsername);
+                            set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
+                        })
+                        .catch(error => {
+                            console.error('Ошибка при сохранении polzovatel при загрузке:', error);
+                        });
+                }
+            }, { onlyOnce: true });
         }
     };
 
@@ -833,44 +899,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json();
         })
         .then(adminIds => {
-            // Проверка, что Telegram Web App доступен и user.id существует
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                 currentUserId = Telegram.WebApp.initDataUnsafe.user.id;
                 // Проверяем, является ли auth.currentUser.uid (Firebase анонимный UID) админом
                 // ИЛИ если текущий Telegram ID пользователя находится в adminIds (для обратной совместимости/гибкости)
                 isAdmin = adminIds.includes(currentUserId) || (auth.currentUser && adminIds.includes(auth.currentUser.uid));
+                console.log(`Пользователь ID: ${currentUserId}, является администратором: ${isAdmin}`);
 
-                console.log(`Пользователь ID: ${currentUserId}, является администратором: ${isAdmin}`); // Логирование статуса администратора
-                
-                // Если пользователь администратор, показать кнопку выбора пользователя
                 if (isAdmin) {
                     adminSelectUserBtn.classList.remove('hidden');
                 } else {
-                    adminSelectUserBtn.classList.add('hidden'); // Скрыть, если не админ
+                    adminSelectUserBtn.classList.add('hidden');
                 }
-
-                // После получения currentUserId, загружаем диалоги из Firebase
-                if (currentUserId) {
-                    // Если есть существующая подписка, отменяем ее
-                    if (unsubscribeFromDialogs) {
-                        unsubscribeFromDialogs();
-                    }
-                    const userDialogsRef = ref(database, 'users/' + currentUserId + '/dialogs');
-                    unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
-                        const data = snapshot.val();
-                        dialogs = data ? data : [];
-                        console.log('Диалоги загружены из Firebase:', dialogs); // Логирование загрузки
-                        renderDialogs(); // Обновляем отображение после загрузки
-                    }, (error) => {
-                        console.error('Ошибка при загрузке диалогов из Firebase:', error);
-                        dialogs = []; // Сброс диалогов в случае ошибки
-                        renderDialogs();
-                    });
-                }
+                
+                // После получения currentUserId и статуса админа, загружаем данные пользователя
+                loadUserDialogsAndPolzovatel();
 
             } else {
                 console.warn('Telegram Web App или user ID недоступны. Режим администратора отключен и диалоги не будут загружены из Firebase.');
-                renderDialogs(); // Рендерим пустой список диалогов
+                renderDialogs();
             }
         })
         .catch(error => {
@@ -1116,37 +1163,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Эта функция парсит текст диалога Telegram и возвращает массив объектов сообщений
     function parseTelegramMessages(inputText, participant1, participant2) {
         const messages = [];
-        const lines = inputText.split('\n');
+        const lines = inputText.split('\\n');
         
         let currentSender = null;
         let currentDate = null;
         let currentLines = [];
 
-        // Регулярное выражение для заголовка сообщения (дата, время, отправитель)
-        // Пример: 15.11.2023 22:30 - Имя Отправителя
-        const headerRegex = /^(\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}) - ([^:]+):?$/;
-        // const headerRegex = /^(.*?) (\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}) - ([^:]+):?$/; // Глобальное regex
-        
+        // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
+        // Оно ищет [DD.MM.YYYY HH:MM] Отправитель: Сообщение
+        const headerRegex = /^\\\[(\\\\d{2}\\\.\\\\d{2}\\\.\\\\d{4}\\\\s+\\\\d{2}:\\\\d{2})\\\]\\\\s*([^:]+):\\\\s*(.*)$/;
+
         for (const line of lines) {
             const match = line.match(headerRegex);
-            
+
             if (match) {
                 // Если найден новый заголовок, сохраняем предыдущее сообщение
                 if (currentSender !== null) {
                     messages.push(createMessage(
-                        currentSender, 
-                        currentDate, 
-                        currentLines, 
-                        participant1, 
+                        currentSender,
+                        currentDate,
+                        currentLines,
+                        participant1,
                         participant2
                     ));
                 }
-                
+
                 // Начинаем новое сообщение
-                const [, datePart, timePart, sender] = match;
+                const [, dateTimePart, sender, messageTextPart] = match; // Извлекаем группы
                 currentSender = sender.trim();
-                currentDate = parseDate(`${datePart} ${timePart}`);
-                currentLines = [];
+                currentDate = parseDate(dateTimePart.trim());
+                currentLines = [messageTextPart.trim()]; // Первая строка сообщения
             } else {
                 // Добавляем текст к текущему сообщению
                 if (currentSender !== null && line) {
@@ -1154,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
+
         // Добавляем последнее сообщение
         if (currentSender !== null) {
             messages.push(createMessage(
@@ -1165,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 participant2
             ));
         }
-        
+
         return messages;
     }
 
@@ -1173,29 +1219,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const [datePart, timePart] = dateString.split(' ');
         const [day, month, year] = datePart.split('.').map(Number);
         const [hours, minutes] = timePart.split(':').map(Number);
-        
+
         // Валидация даты
         if (
-            day > 31 || month > 12 || 
+            day > 31 || month > 12 ||
             hours > 23 || minutes > 59 ||
             isNaN(day) || isNaN(month) || isNaN(year)
         ) {
             console.warn('Некорректная дата:', dateString, 'Возвращена текущая дата.');
             return new Date(); // Возвращаем текущую дату при ошибке
         }
-        
+
         return new Date(year, month - 1, day, hours, minutes);
     }
 
     function createMessage(sender, date, lines, p1, p2) {
         // Обработка многострочных сообщений
-        let text = lines.join('\n').trim();
-        
+        let text = lines.join('\\n').trim();
+
         // Удаление лишних переносов в конце, если они есть
-        if (text.endsWith('\n')) {
+        if (text.endsWith('\\n')) {
             text = text.slice(0, -1);
         }
-        
+
         return {
             sender,
             text,
@@ -1377,15 +1423,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const openUserSelectionModal = () => {
         userListContainer.innerHTML = '<p>Загрузка пользователей...</p>';
         adminUserSelectionModal.classList.remove('hidden-modal');
+        userListContainer.innerHTML = ''; // Очищаем список
         adminUserSelectionModal.classList.add('show-modal');
 
         const usersRef = ref(database, 'users');
         onValue(usersRef, (snapshot) => {
             const usersData = snapshot.val();
-            userListContainer.innerHTML = ''; // Очищаем список
             if (usersData) {
                 Object.keys(usersData).forEach(userId => {
-                    const polzovatel = usersData[userId].polzovatel || `ID: ${userId}`; // Изменено на 'polzovatel'
+                    const polzovatel = usersData[userId].polzovatel || `ID: ${userId}`; // Показываем username, если есть
                     const userItem = document.createElement('div');
                     userItem.classList.add('user-list-item');
                     userItem.textContent = `Пользователь: ${polzovatel}`; // Отображаем имя пользователя
@@ -1396,10 +1442,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 userListContainer.innerHTML = '<p>Пользователи не найдены.</p>';
             }
-        }, (error) => {
+        }, { onlyOnce: true }, (error) => {
             console.error('Ошибка при загрузке списка пользователей:', error);
             userListContainer.innerHTML = '<p>Ошибка загрузки пользователей.</p>';
-        }, { onlyOnce: true }); // Загружаем список пользователей только один раз при открытии модального окна
+        }); // Загружаем список пользователей только один раз при открытии модального окна
     };
 
     // Обработчик кнопки выбора пользователя (для админа)
@@ -1416,36 +1462,23 @@ document.addEventListener('DOMContentLoaded', () => {
         adminUserSelectionModal.classList.remove('show-modal');
         adminUserSelectionModal.classList.add('hidden-modal');
 
-        // После закрытия модального окна, если мы не смотрим как админ, возвращаем диалоги текущего пользователя
-        // Это может быть необходимо, если админ открыл модалку, но не выбрал другого пользователя
-        // или если он хочет вернуться к своим диалогам
-        if (currentUserId && !isAdmin) { // Проверяем, что не админ и что есть текущий ID
-             // Если исходный пользователь не админ, и мы были в режиме просмотра админа, 
-             // то возвращаем диалоги исходного пользователя
-             const userDialogsRef = ref(database, 'users/' + Telegram.WebApp.initDataUnsafe.user.id + '/dialogs');
-             if (unsubscribeFromDialogs) {
-                 unsubscribeFromDialogs();
-             }
-             unsubscribeFromDialogs = onValue(userDialogsRef, (snapshot) => {
-                 const data = snapshot.val();
-                 dialogs = data ? data : [];
-                 console.log('Возвращены диалоги текущего пользователя:', dialogs);
-                 renderDialogs();
-             }, (error) => {
-                 console.error('Ошибка при возвращении диалогов текущего пользователя:', error);
-             });
-        } else if (currentUserId && isAdmin) {
-            // Если админ закрыл модалку, но остается админом, и смотрит свои диалоги
-            // или диалоги какого-то другого пользователя, оставляем как есть
+        // После закрытия модального окна, возвращаем диалоги текущего пользователя (того, кто открыл админку)
+        // Это гарантирует, что пользователь видит свои диалоги после выхода из админ-режима просмотра других.
+        const telegramUser = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+        if (telegramUser) {
+            currentUserId = telegramUser.id; // Возвращаем текущего пользователя
+            loadUserDialogsAndPolzovatel(); // Загружаем его диалоги
+        } else {
+            console.warn('Telegram Web App или user ID недоступны при закрытии модального окна выбора пользователя.');
             renderDialogs();
         }
     });
 
     // Инициализация при загрузке страницы
-    renderDialogs();
-    // showChatListScreen(); // Убеждаемся, что список чатов виден при загрузке - этот вызов теперь не нужен, так как первый экран уже активен по умолчанию в index.html
+    // renderDialogs(); // Этот вызов теперь происходит внутри loadUserDialogsAndPolzovatel
+    // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.007</div>
+    <div class="app-version">Версия приложения 1.011</div>
 </body>
 </html> 
