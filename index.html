@@ -1171,48 +1171,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
         // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]" (строка без текста сообщения)
-        const headerRegex = /^([^,]+),\\s*\\[(\\d{2}\\\.\\d{2}\\\.\\d{4}\\s+\\d{2}:\\d{2})\\]$/;
+        const headerRegex = /^([^,]+),\\s*\[(\\d{2}\\.\\d{2}\\.\\d{4}\\s+\\d{2}:\\d{2})\]$/;
 
-        for (const line of lines) {
-            const match = line.match(headerRegex);
+        try {
+            for (const line of lines) {
+                const match = line.match(headerRegex);
 
-            if (match) {
-                // Если найден новый заголовок, сохраняем предыдущее сообщение
-                if (currentSender !== null) {
-                    messages.push(createMessage(
-                        currentSender,
-                        currentDate,
-                        currentLines,
-                        participant1,
-                        participant2
-                    ));
-                }
+                if (match) {
+                    // Если найден новый заголовок, сохраняем предыдущее сообщение
+                    if (currentSender !== null) {
+                        // Проверяем, есть ли текст для предыдущего сообщения
+                        if (currentLines.length === 0) {
+                            console.warn('Парсинг Telegram: Предыдущее сообщение от "', currentSender, '" не содержит текста. Строка:', lines[lines.indexOf(line) - 1]);
+                        }
+                        messages.push(createMessage(
+                            currentSender,
+                            currentDate,
+                            currentLines,
+                            participant1,
+                            participant2
+                        ));
+                    }
 
-                // Начинаем новое сообщение
-                const [, senderPart, dateTimePart] = match; // Извлекаем группы
-                currentSender = senderPart.trim();
-                currentDate = parseDate(dateTimePart.trim());
-                currentLines = []; // Начинаем с пустого массива для текста сообщения
-            } else {
-                // Добавляем текст к текущему сообщению
-                // Добавляем только непустые строки, если мы уже начали собирать сообщение
-                if (currentSender !== null && line.trim() !== '') {
-                    currentLines.push(line);
+                    // Начинаем новое сообщение
+                    const [, senderPart, dateTimePart] = match; // Извлекаем группы
+                    currentSender = senderPart.trim();
+                    try {
+                        currentDate = parseDate(dateTimePart.trim());
+                    } catch (dateError) {
+                        console.error('Парсинг Telegram: Ошибка разбора даты/времени "', dateTimePart, '". Использована текущая дата. Ошибка:', dateError);
+                        currentDate = new Date();
+                    }
+                    
+                    // Проверка на пустое имя отправителя
+                    if (!currentSender) {
+                        console.warn('Парсинг Telegram: Имя отправителя пусто после разбора заголовка. Заголовок:', line);
+                    }
+
+                    currentLines = []; // Начинаем с пустого массива для текста сообщения
+                } else {
+                    // Добавляем текст к текущему сообщению
+                    // Добавляем только непустые строки, если мы уже начали собирать сообщение
+                    if (currentSender !== null) {
+                        currentLines.push(line);
+                    } else if (line.trim() !== '') {
+                        // Если есть непустая строка, но нет текущего отправителя, это может быть мусор в начале
+                        console.warn('Парсинг Telegram: Строка игнорируется, так как не является заголовком и нет текущего сообщения:', line);
+                    }
                 }
             }
+
+            // Добавляем последнее сообщение
+            if (currentSender !== null) {
+                // Проверяем, есть ли текст для последнего сообщения
+                if (currentLines.length === 0) {
+                    console.warn('Парсинг Telegram: Последнее сообщение от "', currentSender, '" не содержит текста.');
+                }
+                messages.push(createMessage(
+                    currentSender,
+                    currentDate,
+                    currentLines,
+                    participant1,
+                    participant2
+                ));
+            } else {
+                console.warn('Парсинг Telegram: Входной текст не содержит распознанных заголовков сообщений.');
+            }
+        } catch (parseError) {
+            console.error('Парсинг Telegram: Произошла неожиданная ошибка во время парсинга. Ошибка:', parseError, 'Входной текст:', inputText);
         }
 
-        // Добавляем последнее сообщение
-        if (currentSender !== null) {
-            messages.push(createMessage(
-                currentSender,
-                currentDate,
-                currentLines,
-                participant1,
-                participant2
-            ));
-        }
-
+        console.log('Парсинг Telegram: Итоговое количество разобранных сообщений:', messages.length);
         return messages;
     }
 
@@ -1480,6 +1509,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.017</div>
+    <div class="app-version">Версия приложения 1.018</div>
 </body>
 </html> 
