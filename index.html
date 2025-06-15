@@ -1163,7 +1163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Эта функция парсит текст диалога Telegram и возвращает массив объектов сообщений
     function parseTelegramMessages(inputText, participant1, participant2) {
         const messages = [];
-        const lines = inputText.split('\\n');
+        const lines = inputText.split('\n'); // ИСПРАВЛЕНО: использование \n вместо \\n
+
+        // ВРЕМЕННОЕ ЛОГИРОВАНИЕ: Выводим каждую строку для отладки
+        console.log('Парсинг Telegram: Разделенные строки:');
+        lines.forEach((line, index) => console.log(`[${index}]: "${line}"`));
 
         let currentSender = null;
         let currentDate = null;
@@ -1171,7 +1175,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
         // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]" (строка без текста сообщения)
-        const headerRegex = /^([^,]+),\\s*\[(\\d{2}\\.\\d{2}\\.\\d{4}\\s+\\d{2}:\\d{2})\]$/;
+        // Убедимся, что символы, которые могут быть метасимволами в рег. выражении, экранированы.
+        const headerRegex = /^([^,]+),\s*\[(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\]$/;
 
         try {
             for (const line of lines) {
@@ -1265,10 +1270,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createMessage(sender, date, lines, p1, p2) {
         // Обработка многострочных сообщений
-        let text = lines.join('\\n').trim();
+        let text = lines.join('\n').trim();
 
         // Удаление лишних переносов в конце, если они есть
-        if (text.endsWith('\\n')) {
+        if (text.endsWith('\n')) {
             text = text.slice(0, -1);
         }
 
@@ -1509,6 +1514,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.018</div>
+    <div class="app-version">Версия приложения 1.019</div>
 </body>
 </html> 
