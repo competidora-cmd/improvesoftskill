@@ -263,40 +263,42 @@ body {
 }
 
 .message-bubble {
-    max-width: 80%;
-    padding: 10px 15px;
-    border-radius: 20px; /* Более скругленные углы для пузырьков */
-    margin-bottom: 8px;
-    word-wrap: break-word; /* Перенос длинных слов */
-    white-space: pre-wrap; /* Сохраняет пробелы и переносы */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Легкая тень для пузырьков */
-    position: relative; /* Для позиционирования метки */
+    max-width: 75%; /* Немного уменьшим ширину */
+    padding: 8px 12px; /* Меньший padding для менее "раздутого" вида */
+    border-radius: 18px; /* Чуть менее скругленные углы */
+    margin-bottom: 6px; /* Меньший отступ между пузырьками */
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08); /* Более легкая тень */
+    position: relative;
+    font-size: 15px; /* Увеличим размер текста */
 }
 
 .message-bubble.right {
-    align-self: flex-end; /* Выравнивание справа */
-    background-color: #fff; /* Белый фон для правых сообщений */
-    color: #333;
-    border: 1px solid #e0e0e0; /* Серая рамка */
+    align-self: flex-end;
+    background-color: #007aff; /* iOS синий для отправленных сообщений */
+    color: #fff; /* Белый текст на синем фоне */
+    border: none; /* Убираем рамку */
 }
 
 .message-bubble.left {
-    align-self: flex-start; /* Выравнивание слева */
-    background-color: #fff; /* Белый фон для левых сообщений */
-    color: #333;
-    border: 1px solid #e0e0e0; /* Серая рамка */
+    align-self: flex-start;
+    background-color: #e5e5ea; /* Светло-серый фон для входящих сообщений */
+    color: #000; /* Черный текст */
+    border: none; /* Убираем рамку */
 }
 
 .message-info {
     display: block;
-    font-size: 11px;
-    color: #888;
-    margin-top: 5px;
-    text-align: right; /* Время и отправитель справа */
+    font-size: 10px; /* Немного уменьшим размер информации */
+    color: rgba(255, 255, 255, 0.7); /* Более светлый цвет для информации на синем фоне */
+    margin-top: 4px;
+    text-align: right;
 }
 
 .message-bubble.left .message-info {
-    text-align: left; /* Для левых сообщений выравнивание слева */
+    color: #666; /* Темнее для информации на сером фоне */
+    text-align: left;
 }
 
 @keyframes fadeIn {
@@ -1163,29 +1165,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // Эта функция парсит текст диалога Telegram и возвращает массив объектов сообщений
     function parseTelegramMessages(inputText, participant1, participant2) {
         const messages = [];
-        const lines = inputText.split('\n').map(line => line.trim()); // ИСПРАВЛЕНО: использование \n и trim() для каждой строки
+        const lines = inputText.split(/\r?\n/).map(line => line.trim()); // ИСПРАВЛЕНО: использование \r?\n для более надежного разделения строк
 
         let currentSender = null;
         let currentDate = null;
         let currentLines = [];
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
-        // Теперь оно захватывает все, что идет после временной метки на той же строке, как часть сообщения.
-        const headerRegex = /^([^,]+),\s*\[(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\]\s*(.*)$/;
+        // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]" на отдельной строке.
+        // Удалено `[\s]*(.*)` из конца regex, так как текст сообщения идет на новой строке.
+        // Удален `\r?$` из конца regex, так как split и trim обрабатывают это.
+        const headerRegex = /^([^,]+),[\s]*\[(\d{2}[.]\d{2}[.]\d{4}[\s]+\d{2}:\d{2})\]$/;
 
         try {
             for (const line of lines) {
-                // Если строка пуста после trim(), пропускаем ее
+                // ВРЕМЕННОЕ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: Выводим каждый символ и его код
+                console.log('Парсинг Telegram: Обрабатываемая строка (с символами):', `"${line}"`);
+                let charCodes = '';
+                for (let i = 0; i < line.length; i++) {
+                    charCodes += line.charCodeAt(i) + ' ';
+                }
+                console.log('Парсинг Telegram: Коды символов:', charCodes.trim());
+
                 if (line === '') {
+                    console.log('Парсинг Telegram: Пропущена пустая строка.');
                     continue;
                 }
 
                 const match = line.match(headerRegex);
 
                 if (match) {
-                    // Если найден новый заголовок, сохраняем предыдущее сообщение
+                    console.log('Парсинг Telegram: Заголовок найден!', match);
                     if (currentSender !== null) {
-                        // Проверяем, есть ли текст для предыдущего сообщения
                         if (currentLines.length === 0) {
                             console.warn('Парсинг Telegram: Предыдущее сообщение от "', currentSender, '" не содержит текста. Строка, предшествующая новому заголовку:', lines[lines.indexOf(line) - 1]);
                         }
@@ -1199,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Начинаем новое сообщение
-                    const [, senderPart, dateTimePart, initialMessageContent] = match; // Извлекаем группы, включая начальный контент
+                    const [, senderPart, dateTimePart] = match; // Извлекаем группы без initialMessageContent
                     currentSender = senderPart.trim();
                     try {
                         currentDate = parseDate(dateTimePart.trim());
@@ -1208,30 +1219,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentDate = new Date();
                     }
                     
-                    // Проверка на пустое имя отправителя
                     if (!currentSender) {
                         console.warn('Парсинг Telegram: Имя отправителя пусто после разбора заголовка. Заголовок:', line);
                     }
 
-                    currentLines = []; 
-                    if (initialMessageContent) {
-                        currentLines.push(initialMessageContent); // Добавляем начальный контент сообщения
-                    }
+                    currentLines = []; // Сбрасываем для нового сообщения
+                    // initialMessageContent больше не захватывается и не добавляется сюда.
                 } else {
-                    // Добавляем текст к текущему сообщению
-                    // Добавляем только непустые строки, если мы уже начали собирать сообщение
+                    console.log('Парсинг Telegram: Строка не является заголовком.');
                     if (currentSender !== null) {
                         currentLines.push(line);
                     } else if (line.trim() !== '') {
-                        // Если есть непустая строка, но нет текущего отправителя, это может быть мусор в начале
                         console.warn('Парсинг Telegram: Строка игнорируется, так как не является заголовком и нет текущего сообщения:', line);
                     }
                 }
             }
 
-            // Добавляем последнее сообщение
             if (currentSender !== null) {
-                // Проверяем, есть ли текст для последнего сообщения
                 if (currentLines.length === 0) {
                     console.warn('Парсинг Telegram: Последнее сообщение от "', currentSender, '" не содержит текста.');
                 }
@@ -1512,6 +1516,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.020</div>
+    <div class="app-version">Версия приложения 1.021</div>
 </body>
 </html> 
