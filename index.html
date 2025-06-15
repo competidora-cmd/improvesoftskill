@@ -1164,14 +1164,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function parseTelegramMessages(inputText, participant1, participant2) {
         const messages = [];
         const lines = inputText.split('\\n');
-        
+
         let currentSender = null;
         let currentDate = null;
         let currentLines = [];
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
-        // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]"
-        const headerRegex = /^([^,]+),\\s*\\[(\\d{2}\\\.\\d{2}\\\.\\d{4}\\s+\\d{2}:\\d{2})\\](.*)$/;
+        // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]" (строка без текста сообщения)
+        const headerRegex = /^([^,]+),\\s*\\[(\\d{2}\\\.\\d{2}\\\.\\d{4}\\s+\\d{2}:\\d{2})\\]$/;
 
         for (const line of lines) {
             const match = line.match(headerRegex);
@@ -1189,13 +1189,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Начинаем новое сообщение
-                const [, senderPart, dateTimePart, messageTextPart] = match; // Извлекаем группы
+                const [, senderPart, dateTimePart] = match; // Извлекаем группы
                 currentSender = senderPart.trim();
                 currentDate = parseDate(dateTimePart.trim());
-                currentLines = [messageTextPart.trim()]; // Первая строка сообщения
+                currentLines = []; // Начинаем с пустого массива для текста сообщения
             } else {
                 // Добавляем текст к текущему сообщению
-                if (currentSender !== null && line) {
+                // Добавляем только непустые строки, если мы уже начали собирать сообщение
+                if (currentSender !== null && line.trim() !== '') {
                     currentLines.push(line);
                 }
             }
@@ -1479,6 +1480,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.015</div>
+    <div class="app-version">Версия приложения 1.017</div>
 </body>
 </html> 
