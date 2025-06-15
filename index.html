@@ -1163,23 +1163,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Эта функция парсит текст диалога Telegram и возвращает массив объектов сообщений
     function parseTelegramMessages(inputText, participant1, participant2) {
         const messages = [];
-        const lines = inputText.split('\n'); // ИСПРАВЛЕНО: использование \n вместо \\n
-
-        // ВРЕМЕННОЕ ЛОГИРОВАНИЕ: Выводим каждую строку для отладки
-        console.log('Парсинг Telegram: Разделенные строки:');
-        lines.forEach((line, index) => console.log(`[${index}]: "${line}"`));
+        const lines = inputText.split('\n').map(line => line.trim()); // ИСПРАВЛЕНО: использование \n и trim() для каждой строки
 
         let currentSender = null;
         let currentDate = null;
         let currentLines = [];
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
-        // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]" (строка без текста сообщения)
-        // Убедимся, что символы, которые могут быть метасимволами в рег. выражении, экранированы.
-        const headerRegex = /^([^,]+),\s*\[(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\]$/;
+        // Теперь оно захватывает все, что идет после временной метки на той же строке, как часть сообщения.
+        const headerRegex = /^([^,]+),\s*\[(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\]\s*(.*)$/;
 
         try {
             for (const line of lines) {
+                // Если строка пуста после trim(), пропускаем ее
+                if (line === '') {
+                    continue;
+                }
+
                 const match = line.match(headerRegex);
 
                 if (match) {
@@ -1187,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentSender !== null) {
                         // Проверяем, есть ли текст для предыдущего сообщения
                         if (currentLines.length === 0) {
-                            console.warn('Парсинг Telegram: Предыдущее сообщение от "', currentSender, '" не содержит текста. Строка:', lines[lines.indexOf(line) - 1]);
+                            console.warn('Парсинг Telegram: Предыдущее сообщение от "', currentSender, '" не содержит текста. Строка, предшествующая новому заголовку:', lines[lines.indexOf(line) - 1]);
                         }
                         messages.push(createMessage(
                             currentSender,
@@ -1199,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Начинаем новое сообщение
-                    const [, senderPart, dateTimePart] = match; // Извлекаем группы
+                    const [, senderPart, dateTimePart, initialMessageContent] = match; // Извлекаем группы, включая начальный контент
                     currentSender = senderPart.trim();
                     try {
                         currentDate = parseDate(dateTimePart.trim());
@@ -1213,7 +1213,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.warn('Парсинг Telegram: Имя отправителя пусто после разбора заголовка. Заголовок:', line);
                     }
 
-                    currentLines = []; // Начинаем с пустого массива для текста сообщения
+                    currentLines = []; 
+                    if (initialMessageContent) {
+                        currentLines.push(initialMessageContent); // Добавляем начальный контент сообщения
+                    }
                 } else {
                     // Добавляем текст к текущему сообщению
                     // Добавляем только непустые строки, если мы уже начали собирать сообщение
@@ -1271,11 +1274,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function createMessage(sender, date, lines, p1, p2) {
         // Обработка многострочных сообщений
         let text = lines.join('\n').trim();
-
-        // Удаление лишних переносов в конце, если они есть
-        if (text.endsWith('\n')) {
-            text = text.slice(0, -1);
-        }
 
         return {
             sender,
@@ -1514,6 +1512,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.019</div>
+    <div class="app-version">Версия приложения 1.020</div>
 </body>
 </html> 
