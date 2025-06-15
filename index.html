@@ -1170,8 +1170,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentLines = [];
 
         // ОБНОВЛЕННОЕ регулярное выражение для заголовка сообщения Telegram:
-        // Оно ищет [DD.MM.YYYY HH:MM] Отправитель: Сообщение
-        const headerRegex = /^\\\[(\\\\d{2}\\\.\\\\d{2}\\\.\\\\d{4}\\\\s+\\\\d{2}:\\\\d{2})\\\]\\\\s*([^:]+):\\\\s*(.*)$/;
+        // Оно ищет "Имя Отправителя, [ДД.ММ.ГГГГ ЧЧ:ММ]"
+        const headerRegex = /^([^,]+),\\s*\\[(\\d{2}\\\.\\d{2}\\\.\\d{4}\\s+\\d{2}:\\d{2})\\](.*)$/;
 
         for (const line of lines) {
             const match = line.match(headerRegex);
@@ -1189,8 +1189,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Начинаем новое сообщение
-                const [, dateTimePart, sender, messageTextPart] = match; // Извлекаем группы
-                currentSender = sender.trim();
+                const [, senderPart, dateTimePart, messageTextPart] = match; // Извлекаем группы
+                currentSender = senderPart.trim();
                 currentDate = parseDate(dateTimePart.trim());
                 currentLines = [messageTextPart.trim()]; // Первая строка сообщения
             } else {
@@ -1479,6 +1479,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Этот вызов теперь происходит внутри continueLoadingUserData
 });
 </script>
-    <div class="app-version">Версия приложения 1.011</div>
+    <div class="app-version">Версия приложения 1.015</div>
 </body>
 </html> 
