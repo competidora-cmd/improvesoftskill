@@ -783,14 +783,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Сохраняем имя пользователя в Firebase, если оно доступно и еще не сохранено
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && Telegram.WebApp.initDataUnsafe.user.username) {
                 const telegramUsername = Telegram.WebApp.initDataUnsafe.user.username;
-                const usernameRef = ref(database, 'users/' + currentUserId + '/username');
-                onValue(usernameRef, (snapshot) => {
+                const polzovatelRef = ref(database, 'users/' + currentUserId + '/polzovatel');
+                onValue(polzovatelRef, (snapshot) => {
                     if (!snapshot.exists()) { // Если имя пользователя еще не сохранено
-                        set(usernameRef, telegramUsername.toLowerCase())
+                        set(polzovatelRef, telegramUsername.toLowerCase())
                             .then(() => {
-                                console.log('Имя пользователя сохранено:', telegramUsername);
-                                // Также сохраняем в usernamesMap для быстрого поиска
-                                set(ref(database, 'usernamesMap/' + telegramUsername.toLowerCase()), currentUserId);
+                                console.log('Пользователь сохранен:', telegramUsername);
+                                // Также сохраняем в polzovatelMap для быстрого поиска
+                                set(ref(database, 'polzovatelMap/' + telegramUsername.toLowerCase()), currentUserId);
                             })
                             .catch(error => {
                                 console.error('Ошибка при сохранении имени пользователя:', error);
@@ -1362,10 +1362,10 @@ document.addEventListener('DOMContentLoaded', () => {
             userListContainer.innerHTML = ''; // Очищаем список
             if (usersData) {
                 Object.keys(usersData).forEach(userId => {
-                    const username = usersData[userId].username || `ID: ${userId}`; // Показываем username, если есть
+                    const polzovatel = usersData[userId].polzovatel || `ID: ${userId}`; // Изменено на 'polzovatel'
                     const userItem = document.createElement('div');
                     userItem.classList.add('user-list-item');
-                    userItem.textContent = `Пользователь: ${username}`; // Отображаем имя пользователя
+                    userItem.textContent = `Пользователь: ${polzovatel}`; // Отображаем имя пользователя
                     userItem.dataset.userId = userId;
                     userItem.addEventListener('click', () => loadSelectedUserDialogs(userId));
                     userListContainer.appendChild(userItem);
@@ -1423,6 +1423,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showChatListScreen(); // Убеждаемся, что список чатов виден при загрузке - этот вызов теперь не нужен, так как первый экран уже активен по умолчанию в index.html
 });
 </script>
-    <div class="app-version">Версия приложения 1.003</div>
+    <div class="app-version">Версия приложения 1.005</div>
 </body>
 </html> 
