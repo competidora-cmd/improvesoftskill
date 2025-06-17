@@ -184,6 +184,20 @@
     .message-group:not(.mine) .message-time {
       text-align: left;
     }
+
+    .message-annotation {
+      font-size: 13px;
+      color: #7a7a7a;
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px dashed #e0e0e0;
+      word-break: break-word;
+    }
+
+    .message-group.mine .message-annotation {
+      color: #cce7ff; /* Более светлый цвет для аннотаций в синих пузырях */
+      border-color: rgba(255, 255, 255, 0.3);
+    }
   </style>
 </head>
 <body>
